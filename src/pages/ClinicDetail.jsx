@@ -1,220 +1,187 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Clock, Hash, MapPin, Phone } from 'lucide-react';
+import { toast } from 'sonner';
+
 import Layout from '../components/Layout/Layout';
-import { ArrowLeft, Clock, MapPin, Phone, CalendarCheck, Hash, Code2, Workflow } from 'lucide-react';
 import * as api from '../api';
-import FlowGraphEditor from '../components/FlowGraph/FlowGraphEditor';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import ClinicUsage from './ClinicUsage';
+import ClinicSubscription from './ClinicSubscription';
+
+const TABS = ['profile', 'billing', 'usage'];
+
+function InfoItem({ icon: Icon, label, value }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        {Icon ? <Icon className="size-3" /> : null}
+        {label}
+      </div>
+      <div className="text-sm text-foreground">{value ?? '—'}</div>
+    </div>
+  );
+}
 
 export default function ClinicDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [clinic, setClinic] = useState(null);
-  const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [flowConfigText, setFlowConfigText] = useState('');
-  const [savingFlow, setSavingFlow] = useState(false);
-  const [flowView, setFlowView] = useState('graph');
-  const [toast, setToast] = useState(null);
+
+  // Tab lives in the URL so a platform admin can bookmark
+  // /clinics/:id?tab=usage and land straight on the analytics view.
+  const rawTab = searchParams.get('tab');
+  const activeTab = TABS.includes(rawTab) ? rawTab : 'profile';
+
+  const handleTabChange = useCallback(
+    (next) => {
+      const params = new URLSearchParams(searchParams);
+      if (next === 'profile') {
+        params.delete('tab');
+      } else {
+        params.set('tab', next);
+      }
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
 
   useEffect(() => {
-    loadClinicData();
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.getClinic(id);
+        if (!cancelled) setClinic(res.data.data);
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) toast.error('Failed to load clinic');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
-
-  async function loadClinicData() {
-    try {
-      const [clinicRes, aptsRes] = await Promise.all([
-        api.getClinic(id),
-        api.getAppointments({ clinicId: id, limit: 20 }),
-      ]);
-      setClinic(clinicRes.data.data);
-      setFlowConfigText(JSON.stringify(clinicRes.data.data?.flowConfig || {}, null, 2));
-      setAppointments(aptsRes.data.data || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function showToast(message, type = 'success') {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  }
-
-  async function saveFlowConfig() {
-    try {
-      setSavingFlow(true);
-      const parsedFlowConfig = JSON.parse(flowConfigText);
-      const res = await api.updateClinic(id, { flowConfig: parsedFlowConfig });
-      setClinic(res.data.data);
-      setFlowConfigText(JSON.stringify(res.data.data?.flowConfig || {}, null, 2));
-      showToast('Flow config updated');
-    } catch (err) {
-      showToast(err.message === 'Unexpected token' ? 'Invalid JSON' : (err.response?.data?.error || 'Failed to save flow config'), 'error');
-    } finally {
-      setSavingFlow(false);
-    }
-  }
 
   if (loading) {
     return (
-      <Layout title="Clinic Details">
-        <div className="loader-container"><div className="loader" /></div>
+      <Layout title="Clinic details">
+        <div className="space-y-6">
+          <Skeleton className="h-9 w-64" />
+          <Card>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-14 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </Layout>
     );
   }
 
   if (!clinic) {
     return (
-      <Layout title="Clinic Details">
-        <div className="empty-state">
-          <p>Clinic not found</p>
-        </div>
+      <Layout title="Clinic details">
+        <Card>
+          <CardContent className="py-14 text-center text-sm text-muted-foreground">
+            Clinic not found
+          </CardContent>
+        </Card>
       </Layout>
     );
   }
 
   return (
     <Layout title={clinic.name}>
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button className="btn btn-ghost btn-icon" onClick={() => navigate('/clinics')}>
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h1 className="page-title">{clinic.name}</h1>
-            <p className="page-description">Clinic profile & appointments</p>
-          </div>
-        </div>
-        <span className={`badge badge-${clinic.isActive ? 'active' : 'inactive'}`}>
-          {clinic.isActive ? 'Active' : 'Inactive'}
-        </span>
-      </div>
-
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-title" style={{ marginBottom: 20 }}>Clinic Information</div>
-        <div className="info-grid">
-          <div className="info-item">
-            <span className="info-label"><Phone size={12} style={{ marginRight: 4, verticalAlign: -1 }} />Phone</span>
-            <span className="info-value">{clinic.phone}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label"><MapPin size={12} style={{ marginRight: 4, verticalAlign: -1 }} />Address</span>
-            <span className="info-value">{clinic.address || '—'}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label"><Clock size={12} style={{ marginRight: 4, verticalAlign: -1 }} />Working Hours</span>
-            <span className="info-value">{clinic.workingHours?.start} – {clinic.workingHours?.end}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label"><Hash size={12} style={{ marginRight: 4, verticalAlign: -1 }} />Slot Duration</span>
-            <span className="info-value">{clinic.slotDuration} minutes</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Created</span>
-            <span className="info-value">{new Date(clinic.createdAt).toLocaleDateString()}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-header">
-          <div>
-            <div className="card-title">Flow Config</div>
-            <div className="card-subtitle">Default clinic-scoped booking flow — edit visually or as JSON</div>
-          </div>
-          <div className="view-tabs" role="tablist">
-            <button
-              className={`view-tab ${flowView === 'graph' ? 'view-tab-active' : ''}`}
-              onClick={() => setFlowView('graph')}
-              role="tab"
-              aria-selected={flowView === 'graph'}
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={() => navigate('/clinics')}
+              aria-label="Back to clinics"
             >
-              <Workflow size={14} /> Diagram
-            </button>
-            <button
-              className={`view-tab ${flowView === 'json' ? 'view-tab-active' : ''}`}
-              onClick={() => setFlowView('json')}
-              role="tab"
-              aria-selected={flowView === 'json'}
-            >
-              <Code2 size={14} /> JSON
-            </button>
+              <ArrowLeft className="size-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {clinic.name}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Clinic profile, billing &amp; usage
+              </p>
+            </div>
           </div>
+          {clinic.isActive ? (
+            <Badge variant="success" className="font-normal">
+              Active
+            </Badge>
+          ) : (
+            <Badge variant="danger" className="font-normal">
+              Inactive
+            </Badge>
+          )}
         </div>
 
-        {flowView === 'graph' ? (
-          <div style={{ marginBottom: 16 }}>
-            <FlowGraphEditor value={flowConfigText} onChange={setFlowConfigText} />
-          </div>
-        ) : (
-          <div className="form-group" style={{ marginBottom: 16 }}>
-            <textarea
-              className="form-input"
-              value={flowConfigText}
-              onChange={(e) => setFlowConfigText(e.target.value)}
-              rows={20}
-              style={{ fontFamily: 'monospace', resize: 'vertical' }}
-            />
-          </div>
-        )}
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="gap-4">
+          <TabsList>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="billing">Plan &amp; billing</TabsTrigger>
+            <TabsTrigger value="usage">Usage</TabsTrigger>
+          </TabsList>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button className="btn btn-primary" onClick={saveFlowConfig} disabled={savingFlow}>
-            {savingFlow ? 'Saving...' : 'Save Flow Config'}
-          </button>
-        </div>
+          <TabsContent value="profile" className="space-y-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Clinic information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                  <InfoItem icon={Phone} label="Phone" value={clinic.phone} />
+                  <InfoItem
+                    icon={MapPin}
+                    label="Address"
+                    value={clinic.address || '—'}
+                  />
+                  <InfoItem
+                    icon={Clock}
+                    label="Working hours"
+                    value={`${clinic.workingHours?.start} – ${clinic.workingHours?.end}`}
+                  />
+                  <InfoItem
+                    icon={Hash}
+                    label="Slot duration"
+                    value={`${clinic.slotDuration} minutes`}
+                  />
+                  <InfoItem
+                    label="Created"
+                    value={new Date(clinic.createdAt).toLocaleDateString()}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="billing" className="space-y-6">
+            <ClinicSubscription clinicId={id} />
+          </TabsContent>
+
+          <TabsContent value="usage" className="space-y-6">
+            <ClinicUsage clinicId={id} />
+          </TabsContent>
+        </Tabs>
       </div>
-
-      <div className="card">
-        <div className="card-header">
-          <div>
-            <div className="card-title">Appointments</div>
-            <div className="card-subtitle">{appointments.length} appointment{appointments.length !== 1 ? 's' : ''} found</div>
-          </div>
-          <CalendarCheck size={18} style={{ color: 'var(--text-muted)' }} />
-        </div>
-
-        {appointments.length === 0 ? (
-          <div className="empty-state">
-            <CalendarCheck />
-            <p>No appointments for this clinic</p>
-          </div>
-        ) : (
-          <div className="table-container" style={{ border: 'none' }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Patient</th>
-                  <th>Date</th>
-                  <th>Time</th>
-                  <th>Issue</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {appointments.map((apt) => (
-                  <tr key={apt._id}>
-                    <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-                      {apt.patientId?.name || 'N/A'}
-                    </td>
-                    <td>{apt.date}</td>
-                    <td>{apt.time}</td>
-                    <td>{apt.issue || '—'}</td>
-                    <td>
-                      <span className={`badge badge-${apt.status.toLowerCase()}`}>
-                        {apt.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {toast && <div className={`toast toast-${toast.type}`}>{toast.message}</div>}
     </Layout>
   );
 }

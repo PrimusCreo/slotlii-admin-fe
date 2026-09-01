@@ -1,7 +1,19 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+
 import { useAuth } from '../context/AuthContext';
-import { Shield, Eye, EyeOff, Loader2 } from 'lucide-react';
+import darkLogo from '../assets/dark-logo.png';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 export default function Login() {
   const { login, isAuthenticated } = useAuth();
@@ -31,81 +43,97 @@ export default function Login() {
   }
 
   return (
-    <div className="login-page">
-      <div className="login-bg">
-        <div className="login-orb login-orb-1" />
-        <div className="login-orb login-orb-2" />
-        <div className="login-orb login-orb-3" />
-      </div>
-      <div className="login-card">
-        <div className="login-header">
-          <div className="login-logo">
-            <Shield size={28} />
-          </div>
-          <h1 className="login-title">Slotlii</h1>
-          <p className="login-subtitle">Admin Dashboard</p>
-        </div>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <Card className="w-full max-w-sm shadow-lg">
+        <CardHeader className="items-center text-center">
+          <img
+            src={darkLogo}
+            alt="Slotlii"
+            className="mb-3 size-12 rounded-xl shadow-sm"
+          />
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            Slotlii
+          </CardTitle>
+          <CardDescription>
+            Admin dashboard — sign in to continue
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error ? (
+              <div
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {error}
+              </div>
+            ) : null}
 
-        <form onSubmit={handleSubmit} className="login-form">
-          {error && (
-            <div className="login-error">
-              {error}
-            </div>
-          )}
-
-          <div className="login-field">
-            <label className="login-label">Username</label>
-            <input
-              id="login-username"
-              className="login-input"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
-              autoComplete="username"
-              autoFocus
-              required
-            />
-          </div>
-
-          <div className="login-field">
-            <label className="login-label">Password</label>
-            <div className="login-password-wrap">
-              <input
-                id="login-password"
-                className="login-input"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-                autoComplete="current-password"
+            <div className="space-y-1.5">
+              <Label htmlFor="login-username">Username</Label>
+              <Input
+                id="login-username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter username"
+                autoComplete="username"
+                autoFocus
                 required
               />
-              <button
-                type="button"
-                className="login-eye"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
             </div>
-          </div>
 
-          <button
-            id="login-submit"
-            type="submit"
-            className="login-btn"
-            disabled={loading}
-          >
-            {loading ? <Loader2 size={18} className="spin" /> : 'Sign In'}
-          </button>
-        </form>
+            <div className="space-y-1.5">
+              <Label htmlFor="login-password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  autoComplete="current-password"
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </button>
+              </div>
+            </div>
 
-        <p className="login-footer">
-          Secure admin access only
-        </p>
-      </div>
+            <Button
+              id="login-submit"
+              type="submit"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                'Sign in'
+              )}
+            </Button>
+          </form>
+
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            Secure admin access only
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

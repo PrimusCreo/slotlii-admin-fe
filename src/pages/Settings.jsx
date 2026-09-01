@@ -1,41 +1,56 @@
+import { Info, Settings as SettingsIcon } from 'lucide-react';
+
 import Layout from '../components/Layout/Layout';
-import { Settings as SettingsIcon, Info } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function Settings() {
   return (
     <Layout title="Settings">
-      <div className="page-header">
+      <div className="space-y-6">
         <div>
-          <h1 className="page-title">Settings</h1>
-          <p className="page-description">Platform configuration</p>
-        </div>
-      </div>
-
-      <div className="card" style={{ maxWidth: 600 }}>
-        <div className="card-header">
-          <div className="card-title">General Settings</div>
-          <SettingsIcon size={18} style={{ color: 'var(--text-muted)' }} />
+          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Platform configuration
+          </p>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Platform Name</label>
-          <input className="form-input" defaultValue="Slotlii" disabled />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Backend API URL</label>
-          <input className="form-input" defaultValue="http://localhost:3000" disabled />
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '16px', background: 'rgba(59,130,246,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59,130,246,0.15)', marginTop: 12 }}>
-          <Info size={18} style={{ color: 'var(--status-booked)', flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem', marginBottom: 4 }}>Configuration</div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-              Settings are managed via environment variables. Update the <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: 4 }}>.env</code> file on the backend server to modify platform settings.
+        <Card className="max-w-2xl">
+          <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
+            <CardTitle className="text-base">General settings</CardTitle>
+            <SettingsIcon className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="s-name">Platform name</Label>
+              <Input id="s-name" defaultValue="Slotlii" disabled />
             </div>
-          </div>
-        </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="s-api">Backend API URL</Label>
+              <Input
+                id="s-api"
+                defaultValue="http://localhost:3000"
+                disabled
+              />
+            </div>
+
+            <div className="flex items-start gap-2.5 rounded-md border border-[color:var(--status-booked)]/20 bg-[color:var(--status-booked-bg)] p-3">
+              <Info className="mt-0.5 size-4 shrink-0 text-[color:var(--status-booked)]" />
+              <div className="space-y-1 text-sm">
+                <div className="font-medium text-foreground">Configuration</div>
+                <p className="text-xs text-muted-foreground">
+                  Settings are managed via environment variables. Update the{' '}
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+                    .env
+                  </code>{' '}
+                  file on the backend server to modify platform settings.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );

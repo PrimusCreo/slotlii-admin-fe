@@ -7,8 +7,12 @@ import {
   ServerCog,
   XCircle,
 } from 'lucide-react';
+
 import Layout from '../components/Layout/Layout';
 import * as api from '../api';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const STATUS = {
   operational: 'Operational',
@@ -34,20 +38,31 @@ function getFinalStatus(httpStatus, latencyStatus) {
   return 'operational';
 }
 
-function statusMeta(status) {
-  if (status === 'operational') {
-    return { label: STATUS.operational, badgeClass: 'status-dot operational', icon: CheckCircle2 };
-  }
-  if (status === 'degraded') {
-    return { label: STATUS.degraded, badgeClass: 'status-dot degraded', icon: AlertTriangle };
-  }
-  return { label: STATUS.down, badgeClass: 'status-dot down', icon: XCircle };
-}
+const STATUS_META = {
+  operational: {
+    label: STATUS.operational,
+    icon: CheckCircle2,
+    dot: 'bg-[color:var(--status-completed)]',
+    tone: 'text-[color:var(--status-completed)]',
+  },
+  degraded: {
+    label: STATUS.degraded,
+    icon: AlertTriangle,
+    dot: 'bg-[color:var(--status-noshow)]',
+    tone: 'text-[color:var(--status-noshow)]',
+  },
+  down: {
+    label: STATUS.down,
+    icon: XCircle,
+    dot: 'bg-destructive',
+    tone: 'text-destructive',
+  },
+};
 
 const MONITORED_SERVICES = [
   {
     key: 'health',
-    name: 'Core API Health',
+    name: 'Core API health',
     description: 'Backend heartbeat and uptime endpoint',
     check: () => api.getHealth(),
   },
@@ -73,13 +88,11 @@ const MONITORED_SERVICES = [
 
 export default function ApiStatus() {
   const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lastChecked, setLastChecked] = useState(null);
 
-  const runChecks = useCallback(async (isInitialLoad = false) => {
-    if (isInitialLoad) setLoading(true);
-    else setRefreshing(true);
+  const runChecks = useCallback(async () => {
+    setRefreshing(true);
 
     const checks = await Promise.all(
       MONITORED_SERVICES.map(async (service) => {
@@ -96,9 +109,10 @@ export default function ApiStatus() {
             status,
             httpCode: response.status,
             latency,
-            detail: status === 'operational'
-              ? 'API is responding normally'
-              : 'Response received but with elevated latency',
+            detail:
+              status === 'operational'
+                ? 'API is responding normally'
+                : 'Response received but with elevated latency',
           };
         } catch (error) {
           const latency = Math.round(performance.now() - start);
@@ -109,7 +123,10 @@ export default function ApiStatus() {
             status: httpCode && httpCode < 500 ? 'degraded' : 'down',
             httpCode,
             latency,
-            detail: error?.response?.data?.error || error.message || 'Service unavailable',
+            detail:
+              error?.response?.data?.error ||
+              error.message ||
+              'Service unavailable',
           };
         }
       }),
@@ -117,96 +134,122 @@ export default function ApiStatus() {
 
     setServices(checks);
     setLastChecked(new Date());
-    setLoading(false);
     setRefreshing(false);
   }, []);
 
   const globalStatus = useMemo(() => {
-    if (services.some((service) => service.status === 'down')) return 'down';
-    if (services.some((service) => service.status === 'degraded')) return 'degraded';
+    if (!services.length) return 'operational';
+    if (services.some((s) => s.status === 'down')) return 'down';
+    if (services.some((s) => s.status === 'degraded')) return 'degraded';
     return 'operational';
   }, [services]);
 
-  const globalMeta = statusMeta(globalStatus);
+  const globalMeta = STATUS_META[globalStatus];
   const GlobalIcon = globalMeta.icon;
 
-  if (loading) {
-    return (
-      <Layout title="API Status">
-        <div className="loader-container">
-          <div className="loader" />
-        </div>
-      </Layout>
-    );
-  }
-
   return (
-    <Layout title="API Status">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">API Status</h1>
-          <p className="page-description">Live health of backend APIs used by the admin dashboard</p>
-        </div>
-        <button className="btn btn-secondary" onClick={() => runChecks(false)} disabled={refreshing}>
-          <RefreshCw size={16} className={refreshing ? 'spin-icon' : ''} />
-          {refreshing ? 'Refreshing...' : 'Refresh'}
-        </button>
-      </div>
-
-      {!lastChecked && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <p className="page-description">No checks run yet. Click Refresh to load API status.</p>
-        </div>
-      )}
-
-      <div className="status-overview-card">
-        <div className="status-overview-left">
-          <div className={globalMeta.badgeClass} />
+    <Layout title="API status">
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <div className="status-overview-title">Platform Status: {globalMeta.label}</div>
-            <div className="status-overview-subtitle">
-              {lastChecked ? `Last checked at ${lastChecked.toLocaleTimeString()}` : 'Checking status'}
-            </div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              API status
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Live health of backend APIs used by the admin dashboard
+            </p>
           </div>
+          <Button
+            variant="secondary"
+            onClick={runChecks}
+            disabled={refreshing}
+          >
+            <RefreshCw
+              className={cn('size-4', refreshing && 'animate-spin')}
+            />
+            {refreshing ? 'Refreshing…' : lastChecked ? 'Refresh' : 'Run checks'}
+          </Button>
         </div>
-        <GlobalIcon size={18} />
-      </div>
 
-      <div className="status-services-grid">
-        {services.map((service) => {
-          const meta = statusMeta(service.status);
-          const Icon = meta.icon;
-
-          return (
-            <div className="card status-service-card" key={service.key}>
-              <div className="card-header">
+        {!lastChecked ? (
+          <Card>
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              No checks run yet. Click <strong>Run checks</strong> to load API
+              status.
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="flex items-center justify-between gap-4 p-4">
+              <div className="flex items-center gap-3">
+                <span
+                  className={cn('inline-block size-2.5 rounded-full', globalMeta.dot)}
+                />
                 <div>
-                  <div className="card-title">{service.name}</div>
-                  <div className="card-subtitle">{service.description}</div>
+                  <div className="text-sm font-semibold">
+                    Platform status: {globalMeta.label}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Last checked at {lastChecked.toLocaleTimeString()}
+                  </div>
                 </div>
-                <Icon size={18} style={{ color: 'var(--text-muted)' }} />
               </div>
+              <GlobalIcon className={cn('size-5', globalMeta.tone)} />
+            </CardContent>
+          </Card>
+        )}
 
-              <div className="status-service-main">
-                <div className={meta.badgeClass} />
-                <span className="status-label">{meta.label}</span>
-              </div>
+        {services.length ? (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {services.map((service) => {
+              const meta = STATUS_META[service.status];
+              const Icon = meta.icon;
+              return (
+                <Card key={service.key}>
+                  <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                    <div>
+                      <CardTitle className="text-base">
+                        {service.name}
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        {service.description}
+                      </p>
+                    </div>
+                    <Icon className={cn('size-4', meta.tone)} />
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          'inline-block size-2.5 rounded-full',
+                          meta.dot,
+                        )}
+                      />
+                      <span className={cn('text-sm font-medium', meta.tone)}>
+                        {meta.label}
+                      </span>
+                    </div>
 
-              <div className="status-metrics">
-                <span>
-                  <ServerCog size={14} />
-                  HTTP: {service.httpCode ?? 'N/A'}
-                </span>
-                <span>
-                  <Activity size={14} />
-                  Latency: {service.latency} ms
-                </span>
-              </div>
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1.5 tabular-nums">
+                        <ServerCog className="size-3.5" />
+                        HTTP: {service.httpCode ?? 'N/A'}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 tabular-nums">
+                        <Activity className="size-3.5" />
+                        Latency: {service.latency} ms
+                      </span>
+                    </div>
 
-              <p className="status-detail">{service.detail}</p>
-            </div>
-          );
-        })}
+                    <p className="text-xs text-muted-foreground">
+                      {service.detail}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </Layout>
   );
