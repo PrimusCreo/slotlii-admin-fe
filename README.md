@@ -1,16 +1,36 @@
-# React + Vite
+# Slotlii Admin Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend for the Slotlii platform admin.
 
-Currently, two official plugins are available:
+## Environment variables
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Vite only exposes variables prefixed with `VITE_` to the browser. They are
+baked into the bundle at **build time** — changing them on the server after
+`npm run build` has no effect.
 
-## React Compiler
+| Variable | Required | Description |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | Production | Full API origin including `/api`, e.g. `https://api.slotlii.com/api`. Leave empty in local dev to use the Vite proxy. |
+| `VITE_APP_NAME` | No | Product name shown in the chrome. Defaults to `Slotlii`. |
+| `DEV_PROXY_TARGET` | Local only | Backend origin the Vite proxy forwards `/api` and `/health` to. Defaults to `http://localhost:3000`. |
+| `DEV_SERVER_PORT` | Local only | Vite dev server port. Defaults to `5173`. |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Copy the templates:
 
-## Expanding the ESLint configuration
+```bash
+# local
+cp .env.example .env
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# production build (or set the same vars in your host)
+cp .env.production.example .env.production
+```
+
+Then edit `VITE_API_BASE_URL` to your real API host.
+
+## Scripts
+
+```bash
+npm run dev      # local, proxies /api → DEV_PROXY_TARGET
+npm run build    # production bundle (reads .env.production)
+npm run preview  # serve the built dist/
+```

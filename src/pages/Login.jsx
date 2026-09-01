@@ -3,6 +3,7 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
+import { APP_NAME } from '../config/env';
 import darkLogo from '../assets/dark-logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,11 +49,11 @@ export default function Login() {
         <CardHeader className="items-center text-center">
           <img
             src={darkLogo}
-            alt="Slotlii"
+            alt={APP_NAME}
             className="mb-3 size-12 rounded-xl shadow-sm"
           />
           <CardTitle className="text-2xl font-bold tracking-tight">
-            Slotlii
+            {APP_NAME}
           </CardTitle>
           <CardDescription>
             Admin dashboard — sign in to continue

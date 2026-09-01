@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
+import { APP_NAME } from '../../config/env';
 import darkLogo from '../../assets/dark-logo.png';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -40,11 +41,11 @@ export default function Sidebar() {
       <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-border px-5">
         <img
           src={darkLogo}
-          alt="Slotlii"
+          alt={APP_NAME}
           className="size-9 shrink-0 rounded-lg shadow-sm"
         />
         <div className="leading-tight">
-          <div className="text-base font-bold tracking-tight">Slotlii</div>
+          <div className="text-base font-bold tracking-tight">{APP_NAME}</div>
           <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
             Admin Panel
           </div>

@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { API_BASE_URL, HEALTH_URL } from '../config/env';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -50,7 +51,7 @@ export const deleteClinic = (id) => api.delete(`/clinics/${id}`);
 // Admin doesn't expose appointment or patient management surfaces (that's
 // the clinic's domain, not ours), but the API-status page still probes
 // these read endpoints as heartbeats to confirm the backend is healthy.
-export const getHealth = () => axios.get('/health');
+export const getHealth = () => axios.get(HEALTH_URL);
 export const getAppointments = (params) => api.get('/appointments', { params });
 export const getPatients = (params) => api.get('/patients', { params });
 
